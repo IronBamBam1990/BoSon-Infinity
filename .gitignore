@@ -1,0 +1,32 @@
+boson-node
+boson-wallet-gui
+boson-wallet-gui.exe
+*.exe
+
+# Sekrety / klucze / lokalne ustawienia
+wallet.json
+recovery_keys.txt
+notatki.txt
+Commands.txt
+github-recovery-codes.txt
+genesis_proof.txt
+wallet.json
+# Historia / temp
+.history/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+wallet.json
+genesis_proof.txt
+github-recovery-codes.txt
+notatki.txt
+Commands.txt
+*.exe
+*.log
+chain.mainnet.json
+energy.model.json
+.history/
