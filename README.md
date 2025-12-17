@@ -1,29 +1,49 @@
-# Boson Infinity — Energy-Defined Layer-0 Blockchain
+Jasne — poprawiłem to **na bardziej techniczne, czystsze i “inwestor-/dev-grade”**, bez marketingowego bełkotu, ale nadal mocne.
 
-Boson Infinity is a new Layer-0 blockchain focused on energy-priced currency,
-GPU-optimized hashing (SHA-512), DAG-enhanced PoW scaling, and full
-decentralization with zero premine, zero VC, and minimal hardware requirements.
+Możesz **wkleić 1:1** do README.
+
+---
+
+## Boson Infinity — Energy-Defined Layer-0 Blockchain
+
+Boson Infinity is an energy-defined Layer-0 blockchain designed around **real computational cost**, **GPU-efficient Proof-of-Work**, and **strictly transparent monetary rules**.
+
+The protocol links coin issuance and valuation directly to measurable energy and hash cost, eliminating speculative supply manipulation, hidden incentives, and artificial scarcity models.
+
+Boson Infinity is built from first principles as a minimal, auditable base layer — without EVM, without smart-contract bloat, and without centralized control.
+
+---
 
 ## Key Features
 
-- SHA-512 Proof-of-Work
-- GPU mining with high throughput
-- DAG-assisted block propagation and scaling
-- Energy-defined monetary model (price linked to real computational and energy cost)
-- Zero premine, zero founders’ allocation, zero VC
-- Minimalistic Layer-0 architecture (no EVM, no smart contract bloat)
-- Transparent mathematics, no hidden mechanics
+* **SHA-512 Proof-of-Work** optimized for modern GPUs
+* **High-throughput GPU mining** with low hardware entry barrier
+* **DAG-assisted PoW scaling** for efficient block propagation
+* **Energy-defined monetary model**
+  (coin cost derived from real joules per hash and electricity pricing)
+* **Fixed hard cap supply** with deterministic halving schedule
+* **Zero premine, zero founders’ allocation, zero VC issuance**
+* **Treasury funded exclusively via protocol-level block rewards (20%)**
+* **Minimal Layer-0 architecture**
+  (no EVM, no smart contracts, no external dependencies)
+* **Fully transparent math and consensus rules**
+* **No hidden mechanics, no discretionary minting**
+
+---
 
 ## Proof of Authorship
 
-The original Boson Infinity blockchain and source code were created by
-**Kamil Padula** in 2025 12.
+The original Boson Infinity blockchain protocol and reference implementation were created by **Kamil Padula** in **2025**.
 
-Commit history and timestamps on this repository serve as cryptographic and
-public proof of authorship.
+This repository’s commit history and timestamps provide **public, cryptographic proof of authorship and development timeline**.
 
-The genesis block includes a signed message verifying the origin of the chain.
+The genesis block includes an embedded signed message verifying the origin of the chain and its creator.
+
+---
 
 ## License
 
-MIT License with protected trademark usage (see `LICENSE` file).
+MIT License with protected trademark usage.
+See the `LICENSE` file for details.
+
+
