@@ -1,9 +1,3 @@
-Jasne — poprawiłem to **na bardziej techniczne, czystsze i “inwestor-/dev-grade”**, bez marketingowego bełkotu, ale nadal mocne.
-
-Możesz **wkleić 1:1** do README.
-
----
-
 ## Boson Infinity — Energy-Defined Layer-0 Blockchain
 
 Boson Infinity is an energy-defined Layer-0 blockchain designed around **real computational cost**, **GPU-efficient Proof-of-Work**, and **strictly transparent monetary rules**.
