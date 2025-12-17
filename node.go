@@ -42,6 +42,7 @@ const (
 	ReadsPerTry          = 2048
      // 0.1% = 1 promil
     FeePermille = 1
+    TreasuryAddr = "db92fe3a2720cc19256d9a1bab691346ef823e3a" // <- TU MA BYĆ ADRES FIRMY (40 hex)
 
 	// **IMPORTANT**: podmień na losowy 32-znakowy string przed produkcją
 	APIKey = "ef5251f535ed7143b31398c1128d3b6a6ecbb011eb45f10205251f7192be1669"
@@ -721,15 +722,16 @@ func applyBlock(c *Chain, b Block) {
         applyTx(c.State, tx, c, b.Header.Height)
     }
 
-    // 2) Policz wszystkie fee
+    // 2) Policz fee
     var totalFees uint64
     for _, tx := range b.Txs {
         totalFees += tx.Fee
     }
 
-    // 3) Subsidy (coinbase) z halving schedule
+    // 3) Subsidy (halving)
     br := baseRewardAt(b.Header.Height)
 
+    // cap supply
     var remaining uint64
     if c.TotalMinted < MAX_SUPPLY_UNITS {
         remaining = MAX_SUPPLY_UNITS - c.TotalMinted
@@ -738,32 +740,31 @@ func applyBlock(c *Chain, b Block) {
         br = remaining
     }
 
-    // 4) Całkowita nagroda = subsidy + fee
+    // 4) total reward = subsidy + fees
     totalReward := br + totalFees
 
-    // 20% → node wallet, 80% → miner
-    nodeShare := totalReward / 5           // 20%
-    minerShare := totalReward - nodeShare  // 80%
+    minerShare, treasuryShare := splitReward80_20(totalReward)
 
     miner := b.Header.Miner
 
-    // Miner
+    // Miner 80%
     ma := c.State[miner]
     ma.Balance += minerShare
     c.State[miner] = ma
 
-    // Node wallet (stały adres)
-    na := c.State[BridgeOperatorAddr]
-    na.Balance += nodeShare
-    c.State[BridgeOperatorAddr] = na
+    // Treasury 20% ✅
+    ta := c.State[TreasuryAddr]
+    ta.Balance += treasuryShare
+    c.State[TreasuryAddr] = ta
 
-    // 5) Zaktualizuj TotalMinted tylko o SUBSIDY (fee nie są mintem)
+    // 5) Minted tylko o subsidy
     c.TotalMinted += br
 
-    fmt.Printf("[REWARD] miner=%s +%d (fees=%d) node=%s +%d total=%d/%d\n",
-        short(miner), minerShare, totalFees, short(BridgeOperatorAddr),
-        nodeShare, c.TotalMinted, MAX_SUPPLY_UNITS)
+    fmt.Printf("[REWARD] miner=%s +%d (fees=%d) treasury=%s +%d minted=%d/%d\n",
+        short(miner), minerShare, totalFees, short(TreasuryAddr),
+        treasuryShare, c.TotalMinted, MAX_SUPPLY_UNITS)
 }
+
 
 
 /* -------------------------------------------------------------------------- */
@@ -781,87 +782,97 @@ func validTimestamp(prev, now time.Time) bool {
 }
 
 func ValidateBlock(c *Chain, b Block) bool {
-	if b.Header.Height == 0 && b.Hash == "GENESIS" {
-		return true
-	}
+    if b.Header.Height == 0 && b.Hash == "GENESIS" {
+        return true
+    }
 
-	last := c.Blocks[len(c.Blocks)-1]
+    last := c.Blocks[len(c.Blocks)-1]
 
-	if b.Header.PrevHash != last.Hash {
-		fmt.Println("[VAL] bad prev hash")
-		return false
-	}
-	if b.Header.Height != last.Header.Height+1 {
-		fmt.Println("[VAL] bad height")
-		return false
-	}
-	if !validTimestamp(last.Header.Timestamp, b.Header.Timestamp) {
-		fmt.Println("[VAL] bad timestamp")
-		return false
-	}
+    if b.Header.PrevHash != last.Hash {
+        fmt.Println("[VAL] bad prev hash")
+        return false
+    }
+    if b.Header.Height != last.Header.Height+1 {
+        fmt.Println("[VAL] bad height")
+        return false
+    }
+    if !validTimestamp(last.Header.Timestamp, b.Header.Timestamp) {
+        fmt.Println("[VAL] bad timestamp")
+        return false
+    }
 
-	var th []string
-	for _, t := range b.Txs {
-		th = append(th, t.Hash)
-	}
-	if MerkleRoot(th) != b.Header.Merkle {
-		fmt.Println("[VAL] merkle mismatch")
-		return false
-	}
-	if BlockHash(b) != b.Hash {
-		fmt.Println("[VAL] bad block hash")
-		return false
-	}
-	if !checkMask(b.Mix, b.Header.Difficulty) {
-		fmt.Println("[VAL] bad mask")
-		return false
-	}
-	expectedDiff := Retarget(c)
-	if b.Header.Difficulty != expectedDiff {
-		fmt.Println("[VAL] wrong difficulty, expected", expectedDiff)
-		return false
-	}
-	if len(b.Txs) > MaxBlockTXs {
-		fmt.Println("[VAL] too many txs")
-		return false
-	}
+    var th []string
+    for _, t := range b.Txs {
+        th = append(th, t.Hash)
+    }
+    if MerkleRoot(th) != b.Header.Merkle {
+        fmt.Println("[VAL] merkle mismatch")
+        return false
+    }
+    if BlockHash(b) != b.Hash {
+        fmt.Println("[VAL] bad block hash")
+        return false
+    }
+    if !checkMask(b.Mix, b.Header.Difficulty) {
+        fmt.Println("[VAL] bad mask")
+        return false
+    }
+    expectedDiff := Retarget(c)
+    if b.Header.Difficulty != expectedDiff {
+        fmt.Println("[VAL] wrong difficulty, expected", expectedDiff)
+        return false
+    }
+    if len(b.Txs) > MaxBlockTXs {
+        fmt.Println("[VAL] too many txs")
+        return false
+    }
 
-	tmpState := copyState(c.State)
-	tmpChain := *c
-	tmpChain.State = tmpState
-	tmpChain.Staking = copyStaking(c.Staking)
+    tmpState := copyState(c.State)
+    tmpChain := *c
+    tmpChain.State = tmpState
+    tmpChain.Staking = copyStaking(c.Staking)
 
-	var totalFees uint64
-	for _, tx := range b.Txs {
-		if !ValidateTx(tmpChain.State, tx) {
-			fmt.Println("[VAL] invalid tx", tx.Hash)
-			return false
-		}
-		applyTx(tmpChain.State, tx, &tmpChain, b.Header.Height)
-		totalFees += tx.Fee
-	}
+    var totalFees uint64
+    for _, tx := range b.Txs {
+        if !ValidateTx(tmpChain.State, tx) {
+            fmt.Println("[VAL] invalid tx", tx.Hash)
+            return false
+        }
+        applyTx(tmpChain.State, tx, &tmpChain, b.Header.Height)
+        totalFees += tx.Fee
+    }
 
-	br := baseRewardAt(b.Header.Height)
-	var remaining uint64
-	if c.TotalMinted < MAX_SUPPLY_UNITS {
-		remaining = MAX_SUPPLY_UNITS - c.TotalMinted
-	}
-	if br > remaining {
-		br = remaining
-	}
-	coinbase := br + totalFees
+    br := baseRewardAt(b.Header.Height)
+    var remaining uint64
+    if c.TotalMinted < MAX_SUPPLY_UNITS {
+        remaining = MAX_SUPPLY_UNITS - c.TotalMinted
+    }
+    if br > remaining {
+        br = remaining
+    }
 
-	miner := b.Header.Miner
-	ms := tmpState[miner]
-	prev := c.State[miner].Balance
-	newBal := ms.Balance + coinbase
+    totalReward := br + totalFees
+    expMinerShare, expTreasuryShare := splitReward80_20(totalReward)
 
-	if newBal-prev < coinbase {
-		fmt.Println("[VAL] reward mismatch")
-		return false
-	}
+    minerAddr := b.Header.Miner
 
-	return true
+    // ✅ Weryfikacja przyrostu MINERA (80%)
+    prevMiner := c.State[minerAddr].Balance
+    newMiner := tmpState[minerAddr].Balance
+    if newMiner < prevMiner || newMiner-prevMiner != expMinerShare {
+        fmt.Println("[VAL] miner reward mismatch", "want", expMinerShare, "got", newMiner-prevMiner)
+        return false
+    }
+
+    // ✅ Weryfikacja przyrostu TREASURY (20%)
+    prevTreas := c.State[TreasuryAddr].Balance
+    newTreas := tmpState[TreasuryAddr].Balance
+    if newTreas < prevTreas || newTreas-prevTreas != expTreasuryShare {
+        fmt.Println("[VAL] treasury reward mismatch", "want", expTreasuryShare, "got", newTreas-prevTreas)
+        return false
+    }
+
+    return true
 }
 
 func copyState(in map[string]Account) map[string]Account {
@@ -1133,15 +1144,16 @@ func buildWork() Work {
 
     // Całkowita nagroda
     totalRewardUnits := brUnits + feeSum
-
+    
     // Podział nagrody 80/20
     nodeShareUnits := totalRewardUnits / 5
     minerShareUnits := totalRewardUnits - nodeShareUnits
-
+    
     minerReward := float64(minerShareUnits) / float64(UNIT)
     stakeReward := float64(nodeShareUnits) / float64(UNIT) // tu nazwa pola zostaje, ale to "node reward"
     totalReward := float64(totalRewardUnits) / float64(UNIT)
     feesCoins := float64(feeSum) / float64(UNIT)
+
 
     return Work{
         HeaderHex:  headerHex,
@@ -1706,12 +1718,17 @@ func createGenesis() Block {
 		Hash: "GENESIS",
 	}
 }
-
+func splitReward80_20(total uint64) (minerShare uint64, treasuryShare uint64) {
+    treasuryShare = total / 5          // 20%
+    minerShare = total - treasuryShare // 80%
+    return
+}
 func buildGenesisState() map[string]Account {
-	state := map[string]Account{}
-	state[BridgeVaultAddr] = Account{Balance: 0, Nonce: 0}
-	state[BridgeOperatorAddr] = Account{Balance: 0, Nonce: 0}
-	return state
+    state := map[string]Account{}
+    state[BridgeVaultAddr] = Account{Balance: 0, Nonce: 0}
+    state[BridgeOperatorAddr] = Account{Balance: 0, Nonce: 0}
+    state[TreasuryAddr] = Account{Balance: 0, Nonce: 0} // ✅ dodaj
+    return state
 }
 
 /* -------------------------------------------------------------------------- */
