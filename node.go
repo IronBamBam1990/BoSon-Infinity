@@ -278,9 +278,13 @@ func loadEnergyModel(path string) (*EnergyModel, error) {
 }
 // calcFee – stałe fee 0.1% od kwoty (w atomach)
 func calcFee(amount uint64) uint64 {
-    // Fee = amount * FeePermille / 1000
-    return (amount * uint64(FeePermille)) / 1000
+    fee := (amount * uint64(FeePermille)) / 1000
+    if fee == 0 {
+        fee = 1
+    }
+    return fee
 }
+
 func pow10u(n int) uint64 {
 	var v uint64 = 1
 	for i := 0; i < n; i++ {
@@ -953,6 +957,12 @@ func LoadChain() *Chain {
 	if c.State == nil {
 		c.State = map[string]Account{}
 	}
+	// 🔥 MIGRACJA: dodaj TreasuryAddr jeśli brak (stare chainy)
+	if _, ok := c.State[TreasuryAddr]; !ok {
+	    c.State[TreasuryAddr] = Account{Balance: 0, Nonce: 0}
+	    fmt.Println("[MIGRATION] Treasury account added to state:", TreasuryAddr)
+	}
+
 	if c.Staking.Validators == nil {
 		c.Staking.Validators = map[string]Staker{}
 	}
@@ -1038,18 +1048,21 @@ func purgeFromMempool(txs []Tx) {
 /* -------------------------------------------------------------------------- */
 
 type Work struct {
-	HeaderHex   string  `json:"header_hex"`
-	Difficulty  uint32  `json:"difficulty"`
-	Reads       uint32  `json:"reads"`
-	MerkleRoot  string  `json:"merkle_root"`
-	MinerReward float64 `json:"miner_reward"`
-	StakeReward float64 `json:"stake_reward"`
-	TotalReward float64 `json:"total_reward"`
-	Fees        float64 `json:"fees"`
-	JobID       string  `json:"job_id"`
-	ExpiresAt   int64   `json:"expires_at"`
-	TargetProb  string  `json:"target_prob"`
+    HeaderHex       string  `json:"header_hex"`
+    Difficulty      uint32  `json:"difficulty"`
+    Reads           uint32  `json:"reads"`
+    MerkleRoot      string  `json:"merkle_root"`
+
+    MinerReward     float64 `json:"miner_reward"`
+    TreasuryReward  float64 `json:"treasury_reward"` // ✅ 20% dla noda / organizacji
+    TotalReward     float64 `json:"total_reward"`
+    Fees            float64 `json:"fees"`
+
+    JobID           string  `json:"job_id"`
+    ExpiresAt       int64   `json:"expires_at"`
+    TargetProb      string  `json:"target_prob"`
 }
+
 
 
 
@@ -1107,12 +1120,9 @@ func buildWork() Work {
     last := chain.Blocks[len(chain.Blocks)-1]
     nextHeight := last.Header.Height + 1
 
-    // Retarget zwraca int
     nextDiff := Retarget(chain)
-
     txs := pickTxsForBlock()
 
-    // Zbierz hashe TX + policz sumę fee (uint64)
     var th []string
     var feeSum uint64
     for _, t := range txs {
@@ -1128,47 +1138,36 @@ func buildWork() Work {
     expires := time.Now().Add(60 * time.Second).Unix()
     jobID := hmacJob(headerHex, merkle, last.Hash, expires)
 
-    // ZAPIS JOBA → D musi być int
     jobs.Store(jobID, jobInfo{
         H:  headerHex,
         M:  merkle,
         P:  last.Hash,
         E:  expires,
         TX: txs,
-        D:  nextDiff, // <<=== POPRAWIONE, BEZ uint32()
+        D:  nextDiff,
     })
 
-    // Subsidy (uint64)
-    
+    // -------- REWARD (JEDYNA PRAWDA = KONSENSUS) --------
+
     brUnits := baseRewardAt(nextHeight)
-
-    // Całkowita nagroda
     totalRewardUnits := brUnits + feeSum
-    
-    // Podział nagrody 80/20
-    nodeShareUnits := totalRewardUnits / 5
-    minerShareUnits := totalRewardUnits - nodeShareUnits
-    
-    minerReward := float64(minerShareUnits) / float64(UNIT)
-    stakeReward := float64(nodeShareUnits) / float64(UNIT) // tu nazwa pola zostaje, ale to "node reward"
-    totalReward := float64(totalRewardUnits) / float64(UNIT)
-    feesCoins := float64(feeSum) / float64(UNIT)
 
+    minerUnits, treasuryUnits := splitReward80_20(totalRewardUnits)
 
     return Work{
-        HeaderHex:  headerHex,
-        Difficulty: uint32(nextDiff), // UI MINERA → uint32 OK
-        Reads:      ReadsPerTry,
-        MerkleRoot: merkle,
+        HeaderHex:      headerHex,
+        Difficulty:     uint32(nextDiff),
+        Reads:          ReadsPerTry,
+        MerkleRoot:     merkle,
 
-        MinerReward: minerReward,
-        StakeReward: stakeReward,
-        TotalReward: totalReward,
-        Fees:        feesCoins,
+        MinerReward:    float64(minerUnits) / float64(UNIT),
+        TreasuryReward: float64(treasuryUnits) / float64(UNIT),
+        TotalReward:    float64(totalRewardUnits) / float64(UNIT),
+        Fees:           float64(feeSum) / float64(UNIT),
 
-        JobID:      jobID,
-        ExpiresAt:  expires,
-        TargetProb: fmt.Sprintf("1 / 2^%d", nextDiff),
+        JobID:          jobID,
+        ExpiresAt:      expires,
+        TargetProb:     fmt.Sprintf("1 / 2^%d", nextDiff),
     }
 }
 
