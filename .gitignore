@@ -1,18 +1,35 @@
+# Binaries
+*.exe
 boson-node
 boson-wallet-gui
-boson-wallet-gui.exe
-*.exe
 
-# Sekrety / klucze / lokalne ustawienia
+# Secrets / keys / local config — NEVER commit these!
+boson.env
+.env
 wallet.json
 recovery_keys.txt
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Personal notes
 notatki.txt
 Commands.txt
 github-recovery-codes.txt
 genesis_proof.txt
-wallet.json
-# Historia / temp
+
+# Runtime data
+chain.mainnet.json
+chain.mainnet.json.tmp
+energy.model.json
+energy.model.json.tmp
+*.log
+
+# Cache / temp
+__pycache__/
 .history/
+.dtcp_out/
 
 # OS / editor junk
 .DS_Store
@@ -20,13 +37,5 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
-wallet.json
-genesis_proof.txt
-github-recovery-codes.txt
-notatki.txt
-Commands.txt
-*.exe
-*.log
-chain.mainnet.json
-energy.model.json
-.history/
+*.swo
+*~
