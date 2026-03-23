@@ -1,0 +1,5 @@
+e179d6993c7ba67ff3614c2fc8f39a47ba421f07923a0d892888bce79d545480 *boson-infinity-2.1.0-windows-amd64.zip
+1db1080699057ce1b2fb10f2d3d2a104317face95b47205c6a11795affe5da03 *boson-infinity-2.1.0-darwin-amd64.tar.gz
+23efe9e181578bbc4c5020b52071211e44ce55bbe94cd2ac6049635d840432f9 *boson-infinity-2.1.0-darwin-arm64.tar.gz
+a3d9b0a90a160eaf29aeac3e7ce605c09ed3704b95df781a738463d212e3edda *boson-infinity-2.1.0-linux-amd64.tar.gz
+df38687a58f50af54eebf6fd4ab1e2fd8cfd15251dd4cfbedb2cdbe1d9d0ef0a *boson-infinity-2.1.0-linux-arm64.tar.gz

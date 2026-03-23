@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build all binaries
+        run: |
+          go build -o boson-node ./cmd/node/
+          go build -o boson-cli ./cmd/cli/
+          go build -o boson-oracle ./cmd/oracle/
+          go build -o boson-miner ./cmd/miner/
+
+      - name: Run tests
+        run: go test ./core/ ./consensus/ ./security/ ./storage/ ./mempool/ ./p2p/ ./rpc/ -v -count=1 -timeout 120s
+
+      - name: Run crypto tests (including DAG)
+        run: go test ./crypto/ -v -count=1 -timeout 600s -run "TestHash|TestAddr|TestMerkle|TestCheckMask|TestMixHash_Deterministic|TestDAGEpoch|TestDAGSize|TestEncrypt|TestDecrypt"
+
+      - name: Check for race conditions
+        run: go test ./core/ ./consensus/ ./mempool/ ./security/ -race -count=1 -timeout 60s
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Vet
+        run: go vet ./...

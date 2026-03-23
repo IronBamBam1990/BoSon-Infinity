@@ -284,12 +284,17 @@ static void send_energy_report(const char* oracleUrl,
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 3L);
     curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L); // enforce TLS verification
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
 
     CURLcode res = curl_easy_perform(curl);
     (void)res;
 
     if (hdr) curl_slist_free_all(hdr);
     curl_easy_cleanup(curl);
+
+    // Zero sensitive buffer
+    memset(body, 0, sizeof(body));
 }
 
 
@@ -567,10 +572,14 @@ static int post_submit_work(const char* base,const char* api,
     curl_easy_setopt(curl,CURLOPT_POSTFIELDS,json);
     curl_easy_setopt(curl,CURLOPT_TIMEOUT,5L);
     curl_easy_setopt(curl,CURLOPT_URL,u1);
+    curl_easy_setopt(curl,CURLOPT_SSL_VERIFYPEER,1L);
+    curl_easy_setopt(curl,CURLOPT_SSL_VERIFYHOST,2L);
     CURLcode res=curl_easy_perform(curl); long code=0;
     if(res==CURLE_OK)curl_easy_getinfo(curl,CURLINFO_RESPONSE_CODE,&code);
     if(hdr)curl_slist_free_all(hdr);
     curl_easy_cleanup(curl);
+    // Zero sensitive data
+    memset(json,0,sizeof(json));
     return (int)code;
 }
 
@@ -724,11 +733,19 @@ int main(int argc, char** argv) {
     trim_spaces(headerHex);
     strip_0x(headerHex);
 
+    // Validate headerHex length before allocation
+    size_t headerHexLen = strlen(headerHex);
+    if (headerHexLen == 0 || headerHexLen > MAX_INBUF * 2) {
+        fprintf(stderr, "[%s ERR] header_hex length invalid: %zu\n", minerLabel, headerHexLen);
+        return 3;
+    }
+
     unsigned char* headerBytes = (unsigned char*)malloc(MAX_INBUF);
     if (!headerBytes) {
         fprintf(stderr, "[%s ERR] oom headerBytes\n", minerLabel);
         return 3;
     }
+    memset(headerBytes, 0, MAX_INBUF); // zero-init for safety
     size_t headerLen = 0;
     if (hex_to_bytes(headerHex, headerBytes, &headerLen) != 0) {
         fprintf(stderr, "[%s ERR] bad header_hex from server\n", minerLabel);

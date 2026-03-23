@@ -1,0 +1,25 @@
+FROM golang:1.23-alpine AS builder
+
+WORKDIR /build
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /boson-node ./cmd/node/
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /boson-cli ./cmd/cli/
+
+# Runtime image
+FROM alpine:3.19
+
+RUN apk add --no-cache ca-certificates tzdata
+RUN adduser -D -h /data boson
+
+COPY --from=builder /boson-node /usr/local/bin/
+COPY --from=builder /boson-cli /usr/local/bin/
+
+USER boson
+WORKDIR /data
+
+EXPOSE 8080 8081
+
+ENTRYPOINT ["boson-node"]

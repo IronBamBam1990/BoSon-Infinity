@@ -1,12 +1,14 @@
 # Binaries
 *.exe
 boson-node
-boson-wallet-gui
+boson-wallet
+boson-cli
 
 # Secrets / keys / local config — NEVER commit these!
 boson.env
 .env
 wallet.json
+wallet.json.tmp
 recovery_keys.txt
 *.pem
 *.key
@@ -24,12 +26,26 @@ chain.mainnet.json
 chain.mainnet.json.tmp
 energy.model.json
 energy.model.json.tmp
+boson.db
 *.log
+
+# Legacy files (moved during v2 refactor)
+_legacy/
+
+# Dist archives (use GitHub Releases instead)
+dist/*.zip
+dist/*.tar.gz
+dist/*/boson-node*
+dist/*/boson-cli*
+dist/*/boson-miner*
+dist/*/boson-wallet*
+dist/*/boson-oracle*
 
 # Cache / temp
 __pycache__/
 .history/
 .dtcp_out/
+.claude/
 
 # OS / editor junk
 .DS_Store

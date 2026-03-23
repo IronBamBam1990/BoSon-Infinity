@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  node:
+    build: .
+    ports:
+      - "8080:8080"  # RPC
+      - "8081:8081"  # P2P
+    volumes:
+      - node-data:/data
+    environment:
+      - BOSON_API_KEY=${BOSON_API_KEY}
+      - BOSON_TREASURY_ADDR=${BOSON_TREASURY_ADDR}
+      - BOSON_P2P_TOKEN=${BOSON_P2P_TOKEN:-}
+      - BOSON_SEED_NODES=${BOSON_SEED_NODES:-}
+      - BOSON_DATA_DIR=/data
+    restart: unless-stopped
+
+  oracle:
+    build:
+      context: .
+      dockerfile: Dockerfile.oracle
+    ports:
+      - "8090:8090"
+    environment:
+      - BFI_ORACLE_SECRET=${BFI_ORACLE_SECRET:-}
+      - BFI_MODEL_PATH=/data/energy.model.json
+    volumes:
+      - node-data:/data
+    restart: unless-stopped
+
+volumes:
+  node-data:

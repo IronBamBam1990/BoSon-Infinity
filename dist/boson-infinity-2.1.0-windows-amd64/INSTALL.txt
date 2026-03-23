@@ -1,0 +1,111 @@
+
+  BOSON INFINITY v2.1.0 — Installation Guide
+  ============================================
+
+  QUICK INSTALL (Windows)
+  -----------------------
+  1. Double-click install.bat
+  2. Edit %LOCALAPPDATA%\BosonInfinity\data\boson.env
+  3. Run "Start Node.bat"
+  4. Open http://localhost:8080/explorer
+
+  MANUAL INSTALL (any OS)
+  -----------------------
+  1. Copy binaries to a directory in your PATH
+  2. Create a data directory
+  3. Copy boson.env.example to boson.env in the data directory
+  4. Edit boson.env — set at minimum:
+       BOSON_API_KEY=<64-char hex string>
+       BOSON_TREASURY_ADDR=<40-char hex address>
+  5. Run: boson-node
+
+  BINARIES
+  --------
+  boson-node.exe    Full blockchain node (RPC + P2P + Mining + Explorer)
+  boson-cli.exe     Command-line interface for querying the node
+  boson-miner.exe   CPU miner (HTTP polling or WebSocket)
+  boson-wallet.exe  Desktop wallet with encrypted key storage
+  boson-oracle.exe  Energy oracle for cost-per-coin calculations
+
+  CONFIGURATION (boson.env)
+  -------------------------
+  Required:
+    BOSON_API_KEY           64-char hex API key for miner authentication
+    BOSON_TREASURY_ADDR     40-char hex address for treasury (20% block reward)
+
+  Optional:
+    BOSON_P2P_TOKEN         P2P authentication token (production)
+    BOSON_SEED_NODES        Comma-separated seed node URLs
+    BOSON_RPC_PORT          RPC port (default: 8080)
+    BOSON_P2P_PORT          P2P port (default: 8081)
+    BOSON_DATA_DIR          Data directory (default: current dir)
+    BOSON_WALLET_PASS       Wallet encryption passphrase
+    BOSON_TLS_CERT          TLS certificate file path
+    BOSON_TLS_KEY           TLS private key file path
+
+  RUNNING A NODE
+  --------------
+  # Start node:
+  boson-node
+
+  # Check status:
+  boson-cli status
+
+  # View block explorer:
+  http://localhost:8080/explorer
+
+  # View Prometheus metrics:
+  http://localhost:8080/metrics
+
+  MINING
+  ------
+  # Set environment variables:
+  set BOSON_NODE_URL=http://localhost:8080
+  set BOSON_API_KEY=<your-api-key>
+  set BOSON_WALLET=<your-40-hex-wallet-address>
+
+  # Start CPU miner (HTTP polling):
+  boson-miner
+
+  # Start CPU miner (WebSocket — recommended):
+  boson-miner --ws
+
+  WALLET
+  ------
+  # Set passphrase for encrypted key storage:
+  set BOSON_WALLET_PASS=YourStrongPassphrase
+
+  # Start wallet GUI:
+  boson-wallet
+
+  # Opens http://localhost:8090 in your browser
+
+  DOCKER
+  ------
+  docker build -t boson-node .
+  docker run -p 8080:8080 -p 8081:8081 \
+    -e BOSON_API_KEY=<key> \
+    -e BOSON_TREASURY_ADDR=<addr> \
+    boson-node
+
+  API ENDPOINTS
+  -------------
+  GET  /health              Node health check
+  GET  /explorer            Block explorer UI
+  GET  /metrics             Prometheus metrics
+  GET  /stats               Network statistics
+  GET  /getWork             Mining work package
+  POST /submitWork          Submit PoW solution
+  WS   /ws/mining           WebSocket mining
+  POST /tx/submit           Submit transaction
+  GET  /tx/get?hash=        Transaction lookup
+  GET  /tx/proof?hash=      Merkle inclusion proof
+  GET  /account?addr=       Account balance
+  GET  /address/txs?addr=   Transaction history
+  GET  /block?height=       Block details
+  GET  /chain?from=&limit=  Block list
+  GET  /checkpoints         State checkpoints
+
+  SUPPORT
+  -------
+  GitHub: https://github.com/IronBamBam1990/BoSon-Infinity
